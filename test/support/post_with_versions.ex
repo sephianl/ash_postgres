@@ -38,19 +38,21 @@ defmodule AshPostgres.Test.PostWithVersions do
     update :update_with_nested_bulk_update do
       atomic_upgrade?(false)
 
-      change after_action(fn changeset, result, context ->
-               other_posts = __MODULE__ |> Ash.read!()
+      change(
+        after_action(fn changeset, result, context ->
+          other_posts = __MODULE__ |> Ash.read!()
 
-               other_posts
-               |> Enum.reject(fn post -> post.id == result.id end)
-               |> Ash.bulk_update!(:update, %{title2: "nested_update"},
-                 notify?: true,
-                 strategy: :stream,
-                 return_records?: false
-               )
+          other_posts
+          |> Enum.reject(fn post -> post.id == result.id end)
+          |> Ash.bulk_update!(:update, %{title2: "nested_update"},
+            notify?: true,
+            strategy: :stream,
+            return_records?: false
+          )
 
-               {:ok, result}
-             end)
+          {:ok, result}
+        end)
+      )
     end
   end
 end

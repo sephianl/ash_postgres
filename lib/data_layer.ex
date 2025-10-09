@@ -2137,7 +2137,7 @@ defmodule AshPostgres.DataLayer do
                     maybe_create_tenant!(resource, result_for_changeset)
                   end
 
-                  case get_bulk_operation_metadata(changeset) do
+                  case get_bulk_operation_metadata(changeset, :bulk_create) do
                     {index, metadata_key} ->
                       Ash.Resource.put_metadata(result_for_changeset, metadata_key, index)
 
@@ -3737,16 +3737,16 @@ defmodule AshPostgres.DataLayer do
     end
   end
 
-  defp get_bulk_operation_metadata(changeset) do
+  defp get_bulk_operation_metadata(changeset, bulk_action_type) do
     changeset.context
     |> Enum.find_value(fn
       # New format: {{:bulk_create, ref}, value} -> {index, metadata_key}
-      {{:bulk_create, ref}, value} ->
-        {value.index, {:bulk_create_index, ref}}
+      {{^bulk_action_type, ref}, value} ->
+        {value.index, {:"#{bulk_action_type}_index", ref}}
 
       # Fallback for old format: {:bulk_create, value} -> {index, metadata_key}
-      {:bulk_create, value} when is_map(value) ->
-        {value.index, :bulk_create_index}
+      {^bulk_action_type, value} when is_map(value) ->
+        {value.index, :"#{bulk_action_type}_index"}
 
       _ ->
         nil

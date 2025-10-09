@@ -12,15 +12,20 @@ defmodule AshPostgres.BulkUpdatePaperTrailTest do
   describe "nested bulk operations with paper trail" do
     setup do
       # Create test posts
-      posts = Ash.bulk_create!(
-        [%{title: "test1"}, %{title: "test2"}, %{title: "test3"}],
-        PostWithVersions,
-        :create,
-        return_stream?: true,
-        return_records?: true,
-        authorize?: false
-      )
-      |> Enum.map(fn {:ok, result} -> result end)
+      raw_result =
+        Ash.bulk_create!(
+          [%{title: "test1"}, %{title: "test2"}, %{title: "test3"}],
+          PostWithVersions,
+          :create,
+          return_records?: true,
+          return_errors?: true,
+          authorize?: false
+        )
+
+      raw_result |> dbg(label: "SETUP: raw bulk_create result")
+
+      posts = raw_result.records
+      posts |> dbg(label: "SETUP: extracted posts")
 
       %{posts: posts}
     end
@@ -29,15 +34,16 @@ defmodule AshPostgres.BulkUpdatePaperTrailTest do
       target_post = List.first(posts)
 
       # First call - should work
-      result1 = [target_post]
-                |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
-                  resource: PostWithVersions,
-                  domain: AshPostgres.Test.Domain,
-                  strategy: :stream,
-                  notify?: true,
-                  return_records?: false,
-                  authorize?: false
-                )
+      result1 =
+        [target_post]
+        |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
+          resource: PostWithVersions,
+          domain: AshPostgres.Test.Domain,
+          strategy: :stream,
+          notify?: true,
+          return_records?: false,
+          authorize?: false
+        )
 
       assert %Ash.BulkResult{} = result1
 
@@ -45,15 +51,16 @@ defmodule AshPostgres.BulkUpdatePaperTrailTest do
       # This mimics the GraphQL double-call scenario that causes:
       # ** (BadMapError) expected a map, got: nil
       #   (ash) lib/ash/actions/update/bulk.ex:2987: Ash.Actions.Update.Bulk.notification/3
-      result2 = [target_post]
-                |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
-                  resource: PostWithVersions,
-                  domain: AshPostgres.Test.Domain,
-                  strategy: :stream,
-                  notify?: true,
-                  return_records?: false,
-                  authorize?: false
-                )
+      result2 =
+        [target_post]
+        |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
+          resource: PostWithVersions,
+          domain: AshPostgres.Test.Domain,
+          strategy: :stream,
+          notify?: true,
+          return_records?: false,
+          authorize?: false
+        )
 
       assert %Ash.BulkResult{} = result2
     end
@@ -78,32 +85,38 @@ defmodule AshPostgres.BulkUpdatePaperTrailTest do
 
     test "supports nested operations with atomic strategy", %{posts: posts} do
       target_post = List.first(posts)
+      target_post |> dbg(label: "TARGET POST FOR UPDATE")
 
-      assert %Ash.BulkResult{} =
-               [target_post]
-               |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
-                 resource: PostWithVersions,
-                 domain: AshPostgres.Test.Domain,
-                 strategy: :atomic_batches,
-                 notify?: true,
-                 return_records?: false,
-                 authorize?: false
-               )
+      result =
+        [target_post]
+        |> dbg(label: "CALLING BULK UPDATE")
+        |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
+          resource: PostWithVersions,
+          domain: AshPostgres.Test.Domain,
+          strategy: [:atomic_batches, :stream],
+          notify?: true,
+          return_records?: false,
+          authorize?: false
+        )
+
+      result |> dbg(label: "BULK UPDATE RESULT")
+      assert %Ash.BulkResult{} = result
     end
   end
 
   describe "nested bulk operations WITHOUT paper trail (control test)" do
     setup do
       # Create test posts without paper trail
-      posts = Ash.bulk_create!(
-        [%{title: "test1"}, %{title: "test2"}, %{title: "test3"}],
-        PostWithoutVersions,
-        :create,
-        return_stream?: true,
-        return_records?: true,
-        authorize?: false
-      )
-      |> Enum.map(fn {:ok, result} -> result end)
+      posts =
+        Ash.bulk_create!(
+          [%{title: "test1"}, %{title: "test2"}, %{title: "test3"}],
+          PostWithoutVersions,
+          :create,
+          return_stream?: true,
+          return_records?: true,
+          authorize?: false
+        )
+        |> Enum.map(fn {:ok, result} -> result end)
 
       %{posts: posts}
     end
@@ -113,29 +126,31 @@ defmodule AshPostgres.BulkUpdatePaperTrailTest do
       target_post = List.first(posts)
 
       # First call - should work
-      result1 = [target_post]
-                |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
-                  resource: PostWithoutVersions,
-                  domain: AshPostgres.Test.Domain,
-                  strategy: :stream,
-                  notify?: true,
-                  return_records?: false,
-                  authorize?: false
-                )
+      result1 =
+        [target_post]
+        |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
+          resource: PostWithoutVersions,
+          domain: AshPostgres.Test.Domain,
+          strategy: :stream,
+          notify?: true,
+          return_records?: false,
+          authorize?: false
+        )
 
       assert %Ash.BulkResult{} = result1
 
       # Second call - this should work if the bug is specific to AshPaperTrail
       # If this also fails, the bug is in nested bulk updates themselves
-      result2 = [target_post]
-                |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
-                  resource: PostWithoutVersions,
-                  domain: AshPostgres.Test.Domain,
-                  strategy: :stream,
-                  notify?: true,
-                  return_records?: false,
-                  authorize?: false
-                )
+      result2 =
+        [target_post]
+        |> Ash.bulk_update!(:update_with_nested_bulk_update, %{},
+          resource: PostWithoutVersions,
+          domain: AshPostgres.Test.Domain,
+          strategy: :stream,
+          notify?: true,
+          return_records?: false,
+          authorize?: false
+        )
 
       assert %Ash.BulkResult{} = result2
     end
