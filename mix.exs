@@ -197,7 +197,8 @@ defmodule AshPostgres.MixProject do
       {:credo, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:mix_audit, ">= 0.0.0", only: [:dev, :test], runtime: false},
       {:dialyxir, ">= 0.0.0", only: [:dev, :test], runtime: false},
-      {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false}
+      {:sobelow, ">= 0.0.0", only: [:dev, :test], runtime: false},
+      {:ash_paper_trail, "~> 0.5.6", only: [:dev, :test]}
     ]
   end
 
@@ -249,7 +250,7 @@ defmodule AshPostgres.MixProject do
         "docs",
         "spark.replace_doc_links"
       ],
-      format: "format --migrate",
+      format: "format",
       "spark.formatter": "spark.formatter --extensions AshPostgres.DataLayer",
       "spark.cheat_sheets": "spark.cheat_sheets --extensions AshPostgres.DataLayer",
       "test.generate_migrations": "ash_postgres.generate_migrations --auto-name",

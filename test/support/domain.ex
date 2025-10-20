@@ -4,7 +4,7 @@
 
 defmodule AshPostgres.Test.Domain do
   @moduledoc false
-  use Ash.Domain
+  use Ash.Domain, extensions: [AshPaperTrail.Domain]
 
   resources do
     resource(AshPostgres.Test.CoAuthorPost)
@@ -58,6 +58,12 @@ defmodule AshPostgres.Test.Domain do
     resource(AshPostgres.Test.Chat)
     resource(AshPostgres.Test.Message)
     resource(AshPostgres.Test.RSVP)
+    resource(AshPostgres.Test.PostWithVersions)
+    resource(AshPostgres.Test.PostWithoutVersions)
+  end
+
+  paper_trail do
+    include_versions?(true)
   end
 
   authorization do
